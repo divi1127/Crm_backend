@@ -114,17 +114,31 @@ const startServer = async () => {
 
     console.log('✓ Database connected successfully');
 
-    // Sync all models (creates tables if they don't exist)
-    await sequelize.sync({ alter: true });
-    console.log('✓ Database tables synced');
+    // Fix duplicate FK index on Tasks table (filess.io cloud DB issue)
+    try {
+      await sequelize.query('ALTER TABLE `Tasks` DROP FOREIGN KEY `tasks_ibfk_1`');
+    } catch (_) {}
+    try {
+      await sequelize.query('DROP INDEX `tasks_ibfk_1` ON `Tasks`');
+    } catch (_) {}
+
+    // Sync all models safely
+    try {
+      await sequelize.sync({ alter: true });
+      console.log('✓ Database tables synced');
+    } catch (syncErr) {
+      console.warn('⚠ Sync warning (non-fatal):', syncErr.message);
+    }
 
     // Seed default users if none exist
-    const userCount = await User.count();
-    if (userCount === 0) {
-      const { seedDefaults } = await import('./seed.js');
-      await seedDefaults();
-      console.log('✓ Default users seeded');
-    }
+    try {
+      const userCount = await User.count();
+      if (userCount === 0) {
+        const { seedDefaults } = await import('./seed.js');
+        await seedDefaults();
+        console.log('✓ Default users seeded');
+      }
+    } catch (_) {}
 
     app.listen(PORT, () => {
       console.log(`✓ Server running on port ${PORT}`);
