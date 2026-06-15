@@ -9,17 +9,36 @@ const sequelize = new Sequelize(
   process.env.DB_PASSWORD,
   {
     host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
     dialect: 'mysql',
-    logging: false, // Set to true to see SQL queries
+    logging: false,
+
+    // ✅ IMPORTANT FIX FOR RENDER / CLOUD MYSQL
+    dialectOptions: {
+      connectTimeout: 60000,
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
+
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 60000,
+      idle: 10000
+    }
   }
 );
 
+// ✅ CLEAN DB CONNECTION
 export const connectDB = async () => {
   try {
     await sequelize.authenticate();
-    console.log('MySQL Database Connected successfully.');
+    console.log('✓ MySQL Database Connected successfully.');
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    console.error('❌ Unable to connect to the database:', error.message);
+    throw error;
   }
 };
 
