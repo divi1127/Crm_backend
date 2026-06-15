@@ -13,13 +13,8 @@ const sequelize = new Sequelize(
     dialect: 'mysql',
     logging: false,
 
-    // ✅ IMPORTANT FIX FOR RENDER / CLOUD MYSQL
     dialectOptions: {
       connectTimeout: 60000,
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
     },
 
     pool: {
