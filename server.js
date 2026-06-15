@@ -135,16 +135,32 @@ app.get('/api/dashboard', async (req, res) => {
   try {
     const safe = async (fn) => { try { return await fn(); } catch(_) { return 0; } };
 
+    // Build last 6 months chart data
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      months.push({ label: d.toLocaleString('default', { month: 'short' }), year: d.getFullYear(), month: d.getMonth() + 1 });
+    }
+
+    const chartData = await Promise.all(months.map(async ({ label, year, month }) => {
+      const start = `${year}-${String(month).padStart(2,'0')}-01`;
+      const end = new Date(year, month, 1).toISOString().slice(0,10);
+      const leads = await safe(() => Lead.count({ where: { createdAt: { [require('sequelize').Op.gte]: start, [require('sequelize').Op.lt]: end } } }));
+      const sales = await safe(() => SalesDeal.sum('amount', { where: { createdAt: { [require('sequelize').Op.gte]: start, [require('sequelize').Op.lt]: end } } })) || 0;
+      return { name: label, leads, sales };
+    }));
+
     res.json({
       stats: {
         totalLeads:    await safe(() => Lead.count()),
-        salesRevenue:  await safe(() => SalesDeal.sum('amount')) || 45231,
+        salesRevenue:  await safe(() => SalesDeal.sum('amount')) || 0,
         employeeCount: await safe(() => Employee.count()),
         pendingTasks:  await safe(() => Task.count({ where: { status: 'todo' } })),
         totalClients:  await safe(() => Client.count()),
         totalProjects: await safe(() => Project.count()),
       },
-      chartData: [],
+      chartData,
       recentActivities: await safe(() => Lead.findAll({ order: [['createdAt','DESC']], limit: 5 })),
       salesDeals: await safe(() => SalesDeal.findAll({ order: [['createdAt','DESC']] })),
     });
