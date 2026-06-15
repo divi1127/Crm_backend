@@ -105,18 +105,24 @@ app.get('/api/debug-users', async (req, res) => {
 // Force reset default user passwords
 app.get('/api/reset-passwords', async (req, res) => {
   try {
-    await User.update({ password: 'password123', role: 'Admin' }, { where: { email: 'admin@crm.io' } });
-    await User.update({ password: 'password123' }, { where: { email: 'marketing@crm.io' } });
-    await User.update({ password: 'password123' }, { where: { email: 'developer@crm.io' } });
+    // Update existing admin
+    await User.update(
+      { password: 'password123', role: 'Admin', name: 'Admin User', username: 'admin', department: 'Management' },
+      { where: { email: 'admin@crm.io' } }
+    );
 
-    // Create admin if missing
-    const admin = await User.findOne({ where: { email: 'admin@crm.io' } });
-    if (!admin) {
-      await User.create({ name: 'Admin User', email: 'admin@crm.io', username: 'admin', password: 'password123', role: 'Admin', department: 'Management' });
-    }
+    // Create marketing user if missing
+    await User.findOrCreate({ where: { email: 'marketing@crm.io' }, defaults: {
+      name: 'Marketing Employee', username: 'marketing', password: 'password123', role: 'Marketing', department: 'Marketing'
+    }});
 
-    const users = await User.findAll({ attributes: ['id', 'name', 'email', 'role', 'password'] });
-    res.json({ message: 'Passwords reset', users });
+    // Create developer user if missing
+    await User.findOrCreate({ where: { email: 'developer@crm.io' }, defaults: {
+      name: 'Developer Employee', username: 'developer', password: 'password123', role: 'Developer', department: 'Development'
+    }});
+
+    const users = await User.findAll({ attributes: ['id', 'name', 'email', 'username', 'role', 'password'] });
+    res.json({ message: 'Done', users });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -127,19 +133,21 @@ app.get('/api/reset-passwords', async (req, res) => {
 ====================== */
 app.get('/api/dashboard', async (req, res) => {
   try {
-    const totalDealsAmount = await SalesDeal.sum('amount') || 0;
+    const safe = async (fn) => { try { return await fn(); } catch(_) { return 0; } };
 
     res.json({
       stats: {
-        totalLeads: await Lead.count(),
-        salesRevenue: totalDealsAmount || 45231,
-        employeeCount: await Employee.count(),
-        pendingTasks: await Task.count({ where: { status: 'todo' } }),
-        totalClients: await Client.count(),
-        totalProjects: await Project.count()
-      }
+        totalLeads:    await safe(() => Lead.count()),
+        salesRevenue:  await safe(() => SalesDeal.sum('amount')) || 45231,
+        employeeCount: await safe(() => Employee.count()),
+        pendingTasks:  await safe(() => Task.count({ where: { status: 'todo' } })),
+        totalClients:  await safe(() => Client.count()),
+        totalProjects: await safe(() => Project.count()),
+      },
+      chartData: [],
+      recentActivities: await safe(() => Lead.findAll({ order: [['createdAt','DESC']], limit: 5 })),
+      salesDeals: await safe(() => SalesDeal.findAll({ order: [['createdAt','DESC']] })),
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
