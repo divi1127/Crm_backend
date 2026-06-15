@@ -80,6 +80,18 @@ Task.belongsTo(User, {
 app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);
 
+// One-time seed trigger endpoint
+app.get('/api/run-seed', async (req, res) => {
+  try {
+    const { seedDefaults } = await import('./seed.js');
+    await seedDefaults();
+    const count = await User.count();
+    res.json({ message: 'Seed complete', userCount: count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ======================
    DASHBOARD API
 ====================== */
@@ -133,12 +145,17 @@ const startServer = async () => {
     // Seed default users if none exist
     try {
       const userCount = await User.count();
+      console.log(`ℹ User count: ${userCount}`);
       if (userCount === 0) {
         const { seedDefaults } = await import('./seed.js');
         await seedDefaults();
         console.log('✓ Default users seeded');
+      } else {
+        console.log('ℹ Users already exist, skipping seed');
       }
-    } catch (_) {}
+    } catch (seedErr) {
+      console.error('❌ Seed error:', seedErr.message);
+    }
 
     app.listen(PORT, () => {
       console.log(`✓ Server running on port ${PORT}`);
