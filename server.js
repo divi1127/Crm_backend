@@ -40,13 +40,16 @@ app.use(express.json());
 connectDB();
 
 // Sync DB without wiping data — alter:true updates schema only, preserving all records
-sequelize.sync({ alter: true }).then(async () => {
-  console.log('✓ Database synced (data preserved).');
-  console.log('✓ Server is ready to accept requests');
-}).catch(err => {
-  console.error('Failed to sync db: ' + err.message);
-  process.exit(1);
-});
+sequelize.sync()
+  .then(() => {
+    console.log('✓ Database synced successfully.');
+    console.log('✓ Server is ready to accept requests');
+  })
+  .catch((err) => {
+    console.error('Failed to sync database:');
+    console.error(err);
+    process.exit(1);
+  });
 
 // Routes
 app.use('/api/auth', authRoutes);
