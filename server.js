@@ -115,7 +115,7 @@ const startServer = async () => {
     console.log('✓ Database connected successfully');
 
     // Sync all models (creates tables if they don't exist)
-    await sequelize.sync({ alter: false });
+    await sequelize.sync({ alter: true });
     console.log('✓ Database tables synced');
 
     // Seed default users if none exist
