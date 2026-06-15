@@ -7,7 +7,7 @@ import Employee from './models/Employee.js';
 
 dotenv.config();
 
-const seedData = async () => {
+export const seedDefaults = async () => {
   try {
     await connectDB();
     await sequelize.sync({ alter: false });
@@ -43,4 +43,5 @@ const seedData = async () => {
   }
 };
 
-seedData();
+// Run directly: node seed.js
+if (process.argv[1].includes('seed.js')) seedDefaults();

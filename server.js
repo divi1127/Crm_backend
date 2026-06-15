@@ -118,6 +118,14 @@ const startServer = async () => {
     await sequelize.sync({ alter: false });
     console.log('✓ Database tables synced');
 
+    // Seed default users if none exist
+    const userCount = await User.count();
+    if (userCount === 0) {
+      const { seedDefaults } = await import('./seed.js');
+      await seedDefaults();
+      console.log('✓ Default users seeded');
+    }
+
     app.listen(PORT, () => {
       console.log(`✓ Server running on port ${PORT}`);
     });
