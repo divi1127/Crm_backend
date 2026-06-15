@@ -224,7 +224,12 @@ router.route('/employees')
         email: req.body.email,
         username: req.body.username || null,
         password: req.body.password || 'password123',
-        role: req.body.role || 'Developer',
+        role: (() => {
+          const dept = (req.body.department || '').toLowerCase();
+          if (dept.includes('market')) return 'Marketing';
+          if (dept.includes('admin') || dept.includes('manage')) return 'Admin';
+          return 'Developer';
+        })(),
         specialization: req.body.specialization || null
       });
 
