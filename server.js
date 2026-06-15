@@ -25,31 +25,65 @@ dotenv.config();
 
 const app = express();
 
-// middleware
-app.use(cors());
+/* ======================
+   MIDDLEWARE
+====================== */
 app.use(express.json());
 
-// ======================
-// Associations
-// ======================
-Client.hasMany(Project, { foreignKey: 'clientId', as: 'projects', onDelete: 'SET NULL' });
-Project.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://crm-frontend-blond-phi.vercel.app"
+  ],
+  credentials: true
+}));
 
-User.hasMany(WorkUpdate, { foreignKey: 'userId', as: 'workUpdates', onDelete: 'CASCADE' });
-WorkUpdate.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+/* ======================
+   ASSOCIATIONS
+====================== */
+Client.hasMany(Project, {
+  foreignKey: 'clientId',
+  as: 'projects',
+  onDelete: 'SET NULL'
+});
 
-User.hasMany(Task, { foreignKey: 'assignedToUserId', as: 'assignedTasks', onDelete: 'SET NULL' });
-Task.belongsTo(User, { foreignKey: 'assignedToUserId', as: 'assignedTo' });
+Project.belongsTo(Client, {
+  foreignKey: 'clientId',
+  as: 'client'
+});
 
-// ======================
-// Routes
-// ======================
+User.hasMany(WorkUpdate, {
+  foreignKey: 'userId',
+  as: 'workUpdates',
+  onDelete: 'CASCADE'
+});
+
+WorkUpdate.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user'
+});
+
+User.hasMany(Task, {
+  foreignKey: 'assignedToUserId',
+  as: 'assignedTasks',
+  onDelete: 'SET NULL'
+});
+
+Task.belongsTo(User, {
+  foreignKey: 'assignedToUserId',
+  as: 'assignedTo'
+});
+
+/* ======================
+   ROUTES
+====================== */
 app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);
 
-// ======================
-// Dashboard API
-// ======================
+/* ======================
+   DASHBOARD API
+====================== */
 app.get('/api/dashboard', async (req, res) => {
   try {
     const totalDealsAmount = await SalesDeal.sum('amount') || 0;
@@ -70,21 +104,19 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
-// ======================
-// START SERVER (IMPORTANT FIX)
-// ======================
+/* ======================
+   START SERVER
+====================== */
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    // DB connection
     await connectDB();
 
     console.log('✓ Database connected successfully');
 
-    // ❌ NO sequelize.sync() HERE (IMPORTANT FIX)
+    // ❌ IMPORTANT: DO NOT USE sequelize.sync()
 
-    // start server
     app.listen(PORT, () => {
       console.log(`✓ Server running on port ${PORT}`);
     });
@@ -97,9 +129,9 @@ const startServer = async () => {
 
 startServer();
 
-// ======================
-// Error handling
-// ======================
+/* ======================
+   ERROR HANDLING
+====================== */
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
 });
