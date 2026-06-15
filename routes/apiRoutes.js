@@ -338,8 +338,20 @@ router.route('/followups/:id')
 // =======================
 router.route('/attendances')
   .get(protect, async (req, res) => {
-    const attendances = await Attendance.findAll({ order: [['date', 'DESC']] });
-    res.json(attendances);
+    try {
+      let attendances;
+      if (req.user.role === 'Admin') {
+        attendances = await Attendance.findAll({ order: [['date', 'DESC']] });
+      } else {
+        attendances = await Attendance.findAll({
+          where: { employeeName: req.user.name },
+          order: [['date', 'DESC']]
+        });
+      }
+      res.json(attendances);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   })
   .post(protect, async (req, res) => {
     try {
