@@ -92,6 +92,36 @@ app.get('/api/run-seed', async (req, res) => {
   }
 });
 
+// Debug: list all users (remove after fix)
+app.get('/api/debug-users', async (req, res) => {
+  try {
+    const users = await User.findAll({ attributes: ['id', 'name', 'email', 'username', 'role', 'password'] });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Force reset default user passwords
+app.get('/api/reset-passwords', async (req, res) => {
+  try {
+    await User.update({ password: 'password123', role: 'Admin' }, { where: { email: 'admin@crm.io' } });
+    await User.update({ password: 'password123' }, { where: { email: 'marketing@crm.io' } });
+    await User.update({ password: 'password123' }, { where: { email: 'developer@crm.io' } });
+
+    // Create admin if missing
+    const admin = await User.findOne({ where: { email: 'admin@crm.io' } });
+    if (!admin) {
+      await User.create({ name: 'Admin User', email: 'admin@crm.io', username: 'admin', password: 'password123', role: 'Admin', department: 'Management' });
+    }
+
+    const users = await User.findAll({ attributes: ['id', 'name', 'email', 'role', 'password'] });
+    res.json({ message: 'Passwords reset', users });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ======================
    DASHBOARD API
 ====================== */
