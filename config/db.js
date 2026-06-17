@@ -9,31 +9,38 @@ const sequelize = new Sequelize(
   process.env.DB_PASSWORD,
   {
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
+    port: process.env.DB_PORT || 3307,
     dialect: 'mysql',
     logging: false,
-
     dialectOptions: {
       connectTimeout: 60000,
     },
-
     pool: {
-      max: 5,
+      max: 2,
       min: 0,
       acquire: 60000,
-      idle: 10000
+      idle: 5000,
+      evict: 5000
     }
   }
 );
 
-// ✅ CLEAN DB CONNECTION
-export const connectDB = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✓ MySQL Database Connected successfully.');
-  } catch (error) {
-    console.error('❌ Unable to connect to the database:', error.message);
-    throw error;
+export const connectDB = async (retries = 5) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await sequelize.authenticate();
+      console.log('✓ MySQL Database Connected successfully.');
+      return;
+    } catch (error) {
+      console.error(`❌ DB connect attempt ${i + 1}/${retries} failed:`, error.message);
+      if (i < retries - 1) {
+        const wait = (i + 1) * 3000;
+        console.log(`⏳ Retrying in ${wait / 1000}s...`);
+        await new Promise(r => setTimeout(r, wait));
+      } else {
+        throw error;
+      }
+    }
   }
 };
 
