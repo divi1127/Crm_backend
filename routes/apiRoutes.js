@@ -377,10 +377,7 @@ router.post('/attendances/checkin', protect, async (req, res) => {
     const user = req.user;
 
     // IST = UTC + 5h 30min
-    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-    const nowIST = new Date(Date.now() + IST_OFFSET);
     const { date: today, time: timeString } = getIST();
-    const timeString = nowIST.toISOString().slice(11, 16); // HH:MM IST
 
     if (req.body.faceVerified) {
       if (!req.body.employeeId) {
