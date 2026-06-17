@@ -684,7 +684,6 @@ router.route('/work-updates/my')
       // Non-admin employees can only view today's update
       const isAdminOrManager = req.user.role === 'Admin' || req.user.role === 'Manager';
       const today = getIST().date;
-      }
 
       const update = await WorkUpdate.findOne({
         where: { userId: req.user.id, date }
@@ -702,7 +701,6 @@ router.route('/work-updates/my')
       // Non-admin employees can only submit/update for today
       const isAdminOrManager = req.user.role === 'Admin' || req.user.role === 'Manager';
       const today = getIST().date;
-      }
       
       let update = await WorkUpdate.findOne({
         where: { userId: req.user.id, date }
