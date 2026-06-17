@@ -367,10 +367,11 @@ router.post('/attendances/checkin', protect, async (req, res) => {
   try {
     const user = req.user;
 
-    // Use IST time (UTC+5:30)
-    const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
-    const today = nowIST.toISOString().slice(0, 10);
-    const timeString = nowIST.toISOString().slice(11, 16); // HH:MM in IST
+    // IST = UTC + 5h 30min
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const nowIST = new Date(Date.now() + IST_OFFSET);
+    const today = nowIST.toISOString().slice(0, 10);       // YYYY-MM-DD IST
+    const timeString = nowIST.toISOString().slice(11, 16); // HH:MM IST
 
     if (req.body.faceVerified) {
       if (!req.body.employeeId) {
@@ -414,9 +415,10 @@ router.post('/attendances/checkin', protect, async (req, res) => {
 router.post('/attendances/checkout', protect, async (req, res) => {
   try {
     const user = req.user;
-    const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const nowIST = new Date(Date.now() + IST_OFFSET);
     const today = nowIST.toISOString().slice(0, 10);
-    const timeString = nowIST.toISOString().slice(11, 16); // HH:MM in IST
+    const timeString = nowIST.toISOString().slice(11, 16); // HH:MM IST
 
     let attendance = await Attendance.findOne({ where: { employeeName: user.name, date: today } });
     if (!attendance) {
@@ -678,9 +680,7 @@ router.route('/work-updates/my')
 
       // Non-admin employees can only view today's update
       const isAdminOrManager = req.user.role === 'Admin' || req.user.role === 'Manager';
-      const today = new Date().toISOString().slice(0, 10);
-      if (!isAdminOrManager && date !== today) {
-        return res.status(403).json({ message: 'You can only view work updates for today.' });
+      const today = new Date(Date.now() + 5.5*60*60*1000).toISOString().slice(0, 10); // IST date
       }
 
       const update = await WorkUpdate.findOne({
@@ -698,9 +698,7 @@ router.route('/work-updates/my')
 
       // Non-admin employees can only submit/update for today
       const isAdminOrManager = req.user.role === 'Admin' || req.user.role === 'Manager';
-      const today = new Date().toISOString().slice(0, 10);
-      if (!isAdminOrManager && date !== today) {
-        return res.status(403).json({ message: 'You can only submit work updates for today.' });
+      const today = new Date(Date.now() + 5.5*60*60*1000).toISOString().slice(0, 10); // IST date
       }
       
       let update = await WorkUpdate.findOne({
