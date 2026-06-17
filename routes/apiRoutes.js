@@ -15,6 +15,15 @@ import WorkUpdate from '../models/WorkUpdate.js';
 
 const router = express.Router();
 
+// IST time helper
+const getIST = () => {
+  const now = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+  return {
+    date: now.toISOString().slice(0, 10),   // YYYY-MM-DD
+    time: now.toISOString().slice(11, 16),  // HH:MM
+  };
+};
+
 // =======================
 // LEADS ROUTES
 // GET: all authenticated employees can view leads
@@ -370,7 +379,7 @@ router.post('/attendances/checkin', protect, async (req, res) => {
     // IST = UTC + 5h 30min
     const IST_OFFSET = 5.5 * 60 * 60 * 1000;
     const nowIST = new Date(Date.now() + IST_OFFSET);
-    const today = nowIST.toISOString().slice(0, 10);       // YYYY-MM-DD IST
+    const { date: today, time: timeString } = getIST();
     const timeString = nowIST.toISOString().slice(11, 16); // HH:MM IST
 
     if (req.body.faceVerified) {
@@ -415,10 +424,7 @@ router.post('/attendances/checkin', protect, async (req, res) => {
 router.post('/attendances/checkout', protect, async (req, res) => {
   try {
     const user = req.user;
-    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-    const nowIST = new Date(Date.now() + IST_OFFSET);
-    const today = nowIST.toISOString().slice(0, 10);
-    const timeString = nowIST.toISOString().slice(11, 16); // HH:MM IST
+    const { date: today, time: timeString } = getIST();
 
     let attendance = await Attendance.findOne({ where: { employeeName: user.name, date: today } });
     if (!attendance) {
@@ -680,7 +686,7 @@ router.route('/work-updates/my')
 
       // Non-admin employees can only view today's update
       const isAdminOrManager = req.user.role === 'Admin' || req.user.role === 'Manager';
-      const today = new Date(Date.now() + 5.5*60*60*1000).toISOString().slice(0, 10); // IST date
+      const today = getIST().date;
       }
 
       const update = await WorkUpdate.findOne({
@@ -698,7 +704,7 @@ router.route('/work-updates/my')
 
       // Non-admin employees can only submit/update for today
       const isAdminOrManager = req.user.role === 'Admin' || req.user.role === 'Manager';
-      const today = new Date(Date.now() + 5.5*60*60*1000).toISOString().slice(0, 10); // IST date
+      const today = getIST().date;
       }
       
       let update = await WorkUpdate.findOne({
