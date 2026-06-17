@@ -362,13 +362,15 @@ router.route('/attendances')
     }
   });
 
-// Check-in endpoint — MUST be defined before /attendances/:id to avoid :id wildcard capturing 'checkin'
+// Check-in endpoint
 router.post('/attendances/checkin', protect, async (req, res) => {
   try {
     const user = req.user;
-    const today = new Date().toISOString().slice(0,10);
-    const now = new Date();
-    const timeString = now.toTimeString().slice(0,5); // HH:MM
+
+    // Use IST time (UTC+5:30)
+    const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    const today = nowIST.toISOString().slice(0, 10);
+    const timeString = nowIST.toISOString().slice(11, 16); // HH:MM in IST
 
     if (req.body.faceVerified) {
       if (!req.body.employeeId) {
@@ -384,7 +386,6 @@ router.post('/attendances/checkin', protect, async (req, res) => {
       return res.status(400).json({ message: 'Already checked in for today' });
     }
 
-    // Late detection: after 09:30 considered Late
     const lateThreshold = '09:30';
     const status = timeString > lateThreshold ? 'Late' : 'Present';
 
@@ -403,20 +404,19 @@ router.post('/attendances/checkin', protect, async (req, res) => {
     if (req.body.faceVerified) {
       attendanceJson.recognizedEmployeeId = parseInt(req.body.employeeId, 10);
     }
-
     res.status(201).json(attendanceJson);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Check-out endpoint — MUST be defined before /attendances/:id
+// Check-out endpoint
 router.post('/attendances/checkout', protect, async (req, res) => {
   try {
     const user = req.user;
-    const today = new Date().toISOString().slice(0,10);
-    const now = new Date();
-    const timeString = now.toTimeString().slice(0,5); // HH:MM
+    const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    const today = nowIST.toISOString().slice(0, 10);
+    const timeString = nowIST.toISOString().slice(11, 16); // HH:MM in IST
 
     let attendance = await Attendance.findOne({ where: { employeeName: user.name, date: today } });
     if (!attendance) {
