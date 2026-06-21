@@ -230,3 +230,29 @@ export const deleteEmployee = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Reset password by email (no token — plain-text passwords)
+// @route   POST /api/auth/forgot-password
+// @access  Public
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: 'Email and new password are required.' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found with this email address. Please check and try again.' });
+    }
+
+    await user.update({ password: newPassword });
+    res.json({ message: 'Password reset successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

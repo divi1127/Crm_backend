@@ -120,6 +120,10 @@ router.route('/tasks/:id')
         if (task.assignedToUserId !== req.user.id) {
           return res.status(403).json({ message: 'You can only update your own tasks.' });
         }
+        // Once completed, employees cannot change status back
+        if (task.status === 'completed' && req.body.status && req.body.status !== 'completed') {
+          return res.status(403).json({ message: 'This task is already completed and cannot be changed. Contact your Admin.' });
+        }
         await task.update({ status: req.body.status });
       }
       res.json(task);
@@ -372,6 +376,8 @@ router.route('/attendances')
   });
 
 // Check-in endpoint
+const checkInCooldown = new Map(); // userId -> timestamp of last check-in attempt
+
 router.post('/attendances/checkin', protect, async (req, res) => {
   try {
     const user = req.user;
@@ -387,6 +393,13 @@ router.post('/attendances/checkin', protect, async (req, res) => {
         return res.status(403).json({ message: 'Face verification failed: recognized face does not match the logged-in user.' });
       }
     }
+
+    // ── Cooldown guard: block duplicate requests within 5 seconds ──
+    const lastAttempt = checkInCooldown.get(user.id);
+    if (lastAttempt && (Date.now() - lastAttempt) < 5000) {
+      return res.status(429).json({ message: 'Check-in already in progress. Please wait a moment.' });
+    }
+    checkInCooldown.set(user.id, Date.now());
 
     let attendance = await Attendance.findOne({ where: { employeeName: user.name, date: today } });
     if (attendance) {
