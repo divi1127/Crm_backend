@@ -165,7 +165,7 @@ export const getEmployees = async (req, res) => {
   try {
     const employees = await User.findAll({
       where: {
-        role: ['Developer', 'Marketing']
+        role: ['Developer', 'Marketing', 'Employee', 'HR', 'MD']
       },
       attributes: { exclude: ['password'] },
       order: [['createdAt', 'DESC']]

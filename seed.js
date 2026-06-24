@@ -35,7 +35,19 @@ export const seedDefaults = async () => {
       phone: '9876543211', address: 'Development Dept, HQ', joiningDate: '2025-02-10', status: 'Active'
     }});
 
-    console.log('Seed complete: admin@crm.io, marketing@crm.io, developer@crm.io');
+    await User.findOrCreate({ where: { email: 'hr@crm.io' }, defaults: {
+      name: 'HR Manager', username: 'hr', password: 'password123', role: 'HR', department: 'HR'
+    }});
+
+    await User.findOrCreate({ where: { email: 'md@crm.io' }, defaults: {
+      name: 'Managing Director', username: 'md', password: 'password123', role: 'MD', department: 'Management'
+    }});
+
+    await User.findOrCreate({ where: { email: 'employee@crm.io' }, defaults: {
+      name: 'General Employee', username: 'employee', password: 'password123', role: 'Employee', department: 'General'
+    }});
+
+    console.log('Seed complete: admin, marketing, developer, hr, md, employee');
     process.exit();
   } catch (error) {
     console.error('Seed error:', error);

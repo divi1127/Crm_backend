@@ -121,6 +121,21 @@ app.get('/api/reset-passwords', async (req, res) => {
       name: 'Developer Employee', username: 'developer', password: 'password123', role: 'Developer', department: 'Development'
     }});
 
+    // Create HR user if missing
+    await User.findOrCreate({ where: { email: 'hr@crm.io' }, defaults: {
+      name: 'HR Manager', username: 'hr', password: 'password123', role: 'HR', department: 'HR'
+    }});
+
+    // Create MD user if missing
+    await User.findOrCreate({ where: { email: 'md@crm.io' }, defaults: {
+      name: 'Managing Director', username: 'md', password: 'password123', role: 'MD', department: 'Management'
+    }});
+
+    // Create Employee user if missing
+    await User.findOrCreate({ where: { email: 'employee@crm.io' }, defaults: {
+      name: 'General Employee', username: 'employee', password: 'password123', role: 'Employee', department: 'General'
+    }});
+
     const users = await User.findAll({ attributes: ['id', 'name', 'email', 'username', 'role', 'password'] });
     res.json({ message: 'Done', users });
   } catch (err) {
