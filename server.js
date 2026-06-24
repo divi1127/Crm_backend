@@ -209,6 +209,14 @@ const startServer = async () => {
       await sequelize.query('DROP INDEX `tasks_ibfk_1` ON `Tasks`');
     } catch (_) {}
 
+    // Force update Users role ENUM to include new roles
+    try {
+      await sequelize.query(
+        "ALTER TABLE `Users` MODIFY COLUMN `role` ENUM('Admin','Developer','Marketing','Employee','HR','MD') NOT NULL DEFAULT 'Employee'"
+      );
+      console.log('✓ Users role ENUM updated');
+    } catch (_) {}
+
     // Create all missing tables individually - safe even if they already exist
     const tableSQL = [
       `CREATE TABLE IF NOT EXISTS \`FollowUps\` (\`id\` INT AUTO_INCREMENT PRIMARY KEY, \`leadName\` VARCHAR(255) NOT NULL, \`type\` ENUM('Call','Meeting','Email') DEFAULT 'Call', \`date\` DATE NOT NULL, \`time\` VARCHAR(255), \`notes\` TEXT, \`status\` ENUM('Scheduled','Completed','Pending') DEFAULT 'Scheduled', \`createdAt\` DATETIME NOT NULL, \`updatedAt\` DATETIME NOT NULL) ENGINE=InnoDB`,
