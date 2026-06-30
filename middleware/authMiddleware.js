@@ -28,12 +28,15 @@ export const protect = async (req, res, next) => {
   }
 };
 
-// Admin only access
+// Roles with full admin-level access
+const ADMIN_ROLES = ['Admin', 'HR', 'MD'];
+
+// Admin / HR / MD access
 export const admin = (req, res, next) => {
-  if (req.user && req.user.role === 'Admin') {
+  if (req.user && ADMIN_ROLES.includes(req.user.role)) {
     next();
   } else {
-    res.status(403).json({ message: 'Not authorized as an admin' });
+    res.status(403).json({ message: 'Not authorized. Admin access required.' });
   }
 };
 
@@ -55,18 +58,18 @@ export const marketing = (req, res, next) => {
   }
 };
 
-// Admin or Developer access
+// Admin / HR / MD or Developer access
 export const adminOrDeveloper = (req, res, next) => {
-  if (req.user && (req.user.role === 'Admin' || req.user.role === 'Developer')) {
+  if (req.user && (ADMIN_ROLES.includes(req.user.role) || req.user.role === 'Developer')) {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized. Admin or Developer access required' });
   }
 };
 
-// Admin or Marketing access
+// Admin / HR / MD or Marketing access
 export const adminOrMarketing = (req, res, next) => {
-  if (req.user && (req.user.role === 'Admin' || req.user.role === 'Marketing')) {
+  if (req.user && (ADMIN_ROLES.includes(req.user.role) || req.user.role === 'Marketing')) {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized. Admin or Marketing access required' });
