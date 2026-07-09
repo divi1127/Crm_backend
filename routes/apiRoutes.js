@@ -112,6 +112,7 @@ router.route('/tasks/:id')
       const task = await Task.findByPk(req.params.id);
       if (!task) return res.status(404).json({ message: 'Task not found' });
 
+      const ADMIN_ROLES = ['Admin', 'HR', 'MD'];
       if (ADMIN_ROLES.includes(req.user.role)) {
         // Admin/HR/MD can update everything
         await task.update(req.body);
@@ -479,6 +480,7 @@ router.post('/attendances/mark-absent', protect, admin, async (req, res) => {
 });
 
 
+router.route('/attendances/:id')
   .put(protect, admin, async (req, res) => {
     try {
       const attendance = await Attendance.findByPk(req.params.id);
