@@ -409,7 +409,14 @@ router.post('/attendances/checkin', protect, async (req, res) => {
     }
 
     const lateThreshold = '10:00';
-    const status = timeString > lateThreshold ? 'Late' : 'Present';
+    const leaveThreshold = '16:00';
+    
+    let status = 'Present';
+    if (timeString >= leaveThreshold) {
+      status = 'Leave';
+    } else if (timeString > lateThreshold) {
+      status = 'Late';
+    }
 
     attendance = await Attendance.create({
       employeeName: user.name,
@@ -474,12 +481,12 @@ router.post('/attendances/mark-absent', protect, admin, async (req, res) => {
         date: today,
         checkIn: null,
         checkOut: null,
-        status: 'Absent',
+        status: 'Leave',
         type: '-',
       });
       created.push(record);
     }
-    res.json({ message: `Marked ${created.length} employees as Absent`, records: created });
+    res.json({ message: `Marked ${created.length} employees as Leave`, records: created });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

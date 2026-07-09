@@ -28,7 +28,7 @@ const Attendance = sequelize.define('Attendance', {
     defaultValue: 'Office',
   },
   status: {
-    type: DataTypes.ENUM('Present', 'Late', 'Absent'),
+    type: DataTypes.ENUM('Present', 'Late', 'Leave', 'Left Early'),
     defaultValue: 'Present',
   },
   location: {

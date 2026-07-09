@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cron from 'node-cron';
 import sequelize, { connectDB } from './config/db.js';
 
 // routes
@@ -261,6 +262,37 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`✓ Server running on port ${PORT}`);
+    });
+
+    // Run auto-leave check every Mon-Sat at 18:00 (6:00 PM) Server Time (assuming server time is configured for IST or UTC if desired, node-cron uses server time).
+    cron.schedule('0 18 * * 1-6', async () => {
+      console.log('Running scheduled auto-leave check...');
+      try {
+        const now = new Date(Date.now() + 5.5 * 60 * 60 * 1000); // GET IST
+        const today = now.toISOString().slice(0, 10);
+        
+        const allUsers = await User.findAll({
+          where: { role: ['Developer', 'Marketing', 'HR', 'MD', 'Admin'] },
+          attributes: ['id', 'name']
+        });
+        const existing = await Attendance.findAll({ where: { date: today } });
+        const presentNames = new Set(existing.map(a => a.employeeName));
+        const absentUsers = allUsers.filter(u => !presentNames.has(u.name));
+        
+        for (const u of absentUsers) {
+          await Attendance.create({
+            employeeName: u.name,
+            date: today,
+            checkIn: null,
+            checkOut: null,
+            status: 'Leave',
+            type: '-',
+          });
+        }
+        console.log(`Auto-marked ${absentUsers.length} employees as Leave for ${today}.`);
+      } catch (err) {
+        console.error('Error during auto-leave check:', err);
+      }
     });
 
   } catch (err) {
