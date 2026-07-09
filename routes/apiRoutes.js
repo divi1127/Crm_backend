@@ -76,9 +76,9 @@ router.route('/leads/:id')
 router.route('/tasks')
   .get(protect, async (req, res) => {
     try {
+      const ADMIN_ROLES = ['Admin', 'HR', 'MD'];
       let tasks;
-      if (req.user.role === 'Admin') {
-        // Admin sees ALL tasks
+      if (ADMIN_ROLES.includes(req.user.role)) {
         tasks = await Task.findAll({ order: [['createdAt', 'DESC']] });
       } else {
         // Employees only see tasks assigned to them
@@ -112,8 +112,8 @@ router.route('/tasks/:id')
       const task = await Task.findByPk(req.params.id);
       if (!task) return res.status(404).json({ message: 'Task not found' });
 
-      if (req.user.role === 'Admin') {
-        // Admin can update everything
+      if (ADMIN_ROLES.includes(req.user.role)) {
+        // Admin/HR/MD can update everything
         await task.update(req.body);
       } else {
         // Employee can only update STATUS of tasks assigned to them
@@ -352,8 +352,9 @@ router.route('/followups/:id')
 router.route('/attendances')
   .get(protect, async (req, res) => {
     try {
+      const ADMIN_ROLES_ATT = ['Admin', 'HR', 'MD'];
       let attendances;
-      if (req.user.role === 'Admin') {
+      if (ADMIN_ROLES_ATT.includes(req.user.role)) {
         attendances = await Attendance.findAll({ order: [['date', 'DESC']] });
       } else {
         attendances = await Attendance.findAll({
@@ -406,7 +407,7 @@ router.post('/attendances/checkin', protect, async (req, res) => {
       return res.status(400).json({ message: 'Already checked in for today' });
     }
 
-    const lateThreshold = '09:30';
+    const lateThreshold = '10:00';
     const status = timeString > lateThreshold ? 'Late' : 'Present';
 
     attendance = await Attendance.create({
@@ -448,7 +449,36 @@ router.post('/attendances/checkout', protect, async (req, res) => {
   }
 });
 
-router.route('/attendances/:id')
+// Auto-mark absent: call after 18:00 IST — marks all users who have no attendance record for today
+router.post('/attendances/mark-absent', protect, admin, async (req, res) => {
+  try {
+    const { date: today } = getIST();
+    const allUsers = await User.findAll({
+      where: { role: ['Developer', 'Marketing', 'HR', 'MD', 'Admin'] },
+      attributes: ['id', 'name']
+    });
+    const existing = await Attendance.findAll({ where: { date: today } });
+    const presentNames = new Set(existing.map(a => a.employeeName));
+    const absentUsers = allUsers.filter(u => !presentNames.has(u.name));
+    const created = [];
+    for (const u of absentUsers) {
+      const record = await Attendance.create({
+        employeeName: u.name,
+        date: today,
+        checkIn: null,
+        checkOut: null,
+        status: 'Absent',
+        type: '-',
+      });
+      created.push(record);
+    }
+    res.json({ message: `Marked ${created.length} employees as Absent`, records: created });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
   .put(protect, admin, async (req, res) => {
     try {
       const attendance = await Attendance.findByPk(req.params.id);
@@ -720,14 +750,15 @@ router.route('/work-updates/my')
       });
 
       if (update) {
-        await update.update({
-          update11AM,
-          update3PM,
-          update630PM_completed,
-          update630PM_pending,
-          update630PM_tomorrow,
-          update630PM_issues
-        });
+        // Slot locking: once a slot has content, it cannot be overwritten
+        const updateData = {};
+        if (!update.update11AM && update11AM !== undefined) updateData.update11AM = update11AM;
+        if (!update.update3PM && update3PM !== undefined) updateData.update3PM = update3PM;
+        if (!update.update630PM_completed && update630PM_completed !== undefined) updateData.update630PM_completed = update630PM_completed;
+        if (update630PM_pending !== undefined) updateData.update630PM_pending = update630PM_pending;
+        if (update630PM_tomorrow !== undefined) updateData.update630PM_tomorrow = update630PM_tomorrow;
+        if (update630PM_issues !== undefined) updateData.update630PM_issues = update630PM_issues;
+        await update.update(updateData);
       } else {
         update = await WorkUpdate.create({
           userId: req.user.id,
@@ -749,15 +780,12 @@ router.route('/work-updates/my')
 router.route('/work-updates/team')
   .get(protect, async (req, res) => {
     try {
-      // Allow Admin, Developer and Marketing roles to view team updates
-      if (!['Admin', 'Developer', 'Marketing'].includes(req.user.role)) {
-        return res.status(403).json({ message: 'Not authorized to view team updates' });
-      }
+      // Allow all roles to view team updates
       const { date } = req.query;
       if (!date) return res.status(400).json({ message: 'Date is required' });
 
       const users = await User.findAll({
-        where: { role: ['Developer', 'Marketing'] },
+        where: { role: ['Developer', 'Marketing', 'HR', 'MD'] },
         attributes: ['id', 'name', 'email', 'department'],
         include: [{
           model: WorkUpdate,
