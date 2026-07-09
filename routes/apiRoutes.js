@@ -443,7 +443,13 @@ router.post('/attendances/checkout', protect, async (req, res) => {
       return res.status(404).json({ message: 'No check-in found for today' });
     }
 
-    await attendance.update({ checkOut: timeString });
+    // If checking out before 16:00, mark as Left Early
+    const earlyLeaveThreshold = '16:00';
+    const updateData = { checkOut: timeString };
+    if (timeString < earlyLeaveThreshold) {
+      updateData.status = 'Left Early';
+    }
+    await attendance.update(updateData);
     res.json(attendance);
   } catch (error) {
     res.status(500).json({ message: error.message });
