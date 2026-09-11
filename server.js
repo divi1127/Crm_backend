@@ -295,6 +295,32 @@ const startServer = async () => {
       }
     });
 
+    // Auto-checkout every Mon-Sat at 18:30 (6:30 PM) IST
+    cron.schedule('30 18 * * 1-6', async () => {
+      console.log('Running scheduled auto-checkout at 6:30 PM...');
+      try {
+        const now = new Date(Date.now() + 5.5 * 60 * 60 * 1000); // GET IST
+        const today = now.toISOString().slice(0, 10);
+
+        const checkedIn = await Attendance.findAll({
+          where: { date: today, checkIn: { [Op.ne]: null }, checkOut: null }
+        });
+
+        let updatedCount = 0;
+        for (const record of checkedIn) {
+          const updateData = { checkOut: '18:30' };
+          if (record.checkIn && record.checkIn < '16:00') {
+            updateData.status = 'Left Early';
+          }
+          await record.update(updateData);
+          updatedCount++;
+        }
+        console.log(`Auto-checkout: ${updatedCount} employees checked out at 18:30 for ${today}.`);
+      } catch (err) {
+        console.error('Error during auto-checkout:', err);
+      }
+    }, { timezone: 'Asia/Kolkata' });
+
   } catch (err) {
     console.error('❌ Startup error:', err);
     process.exit(1);

@@ -405,7 +405,9 @@ router.post('/attendances/checkin', protect, async (req, res) => {
 
     let attendance = await Attendance.findOne({ where: { employeeName: user.name, date: today } });
     if (attendance) {
-      return res.status(400).json({ message: 'Already checked in for today' });
+      const existing = attendance.toJSON();
+      existing.alreadyCheckedIn = true;
+      return res.status(200).json(existing);
     }
 
     const lateThreshold = '10:00';
