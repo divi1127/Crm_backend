@@ -295,9 +295,9 @@ const startServer = async () => {
       }
     });
 
-    // Auto-checkout every Mon-Sat at 18:30 (6:30 PM) IST
-    cron.schedule('30 18 * * 1-6', async () => {
-      console.log('Running scheduled auto-checkout at 6:30 PM...');
+    // Auto-checkout every Mon-Sat at 18:00 (6:00 PM) IST
+    cron.schedule('0 18 * * 1-6', async () => {
+      console.log('Running scheduled auto-checkout at 6:00 PM IST...');
       try {
         const now = new Date(Date.now() + 5.5 * 60 * 60 * 1000); // GET IST
         const today = now.toISOString().slice(0, 10);
@@ -308,14 +308,11 @@ const startServer = async () => {
 
         let updatedCount = 0;
         for (const record of checkedIn) {
-          const updateData = { checkOut: '18:30' };
-          if (record.checkIn && record.checkIn < '16:00') {
-            updateData.status = 'Left Early';
-          }
+          const updateData = { checkOut: '18:00' };
           await record.update(updateData);
           updatedCount++;
         }
-        console.log(`Auto-checkout: ${updatedCount} employees checked out at 18:30 for ${today}.`);
+        console.log(`Auto-checkout: ${updatedCount} employees checked out at 18:00 for ${today}.`);
       } catch (err) {
         console.error('Error during auto-checkout:', err);
       }
