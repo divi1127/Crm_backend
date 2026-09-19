@@ -387,6 +387,19 @@ router.post('/attendances/checkin', protect, async (req, res) => {
     // IST = UTC + 5h 30min
     const { date: today, time: timeString } = getIST();
 
+    // ── Working-hours guard: non-exempt roles cannot check in outside 06:00–18:00 IST ──
+    const EXEMPT_ROLES = ['Admin', 'HR', 'MD'];
+    if (!EXEMPT_ROLES.includes(user.role)) {
+      const [h, m] = timeString.split(':').map(Number);
+      const totalMin = h * 60 + m;
+      if (totalMin >= 18 * 60 || totalMin < 6 * 60) {
+        return res.status(403).json({
+          message: 'Check-in is not allowed outside working hours (06:00 AM – 6:00 PM IST).',
+          code: 'AFTER_HOURS_LOCK',
+        });
+      }
+    }
+
     if (req.body.faceVerified) {
       if (!req.body.employeeId) {
         return res.status(400).json({ message: 'Face recognition data missing.' });

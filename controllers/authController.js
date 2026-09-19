@@ -1,6 +1,20 @@
 import User from '../models/User.js';
+import Attendance from '../models/Attendance.js';
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
+
+// Roles that are exempt from working-hours login restrictions
+const EXEMPT_ROLES = ['Admin', 'HR', 'MD'];
+
+// IST time helper (UTC + 5h 30min)
+const getIST = () => {
+  const now = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+  return {
+    date: now.toISOString().slice(0, 10), // YYYY-MM-DD
+    hours: now.getUTCHours(),
+    minutes: now.getUTCMinutes(),
+  };
+};
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -71,19 +85,47 @@ export const loginUser = async (req, res) => {
       }
     });
 
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-        department: user.department,
-        token: generateToken(user.id),
-      });
-    } else {
-      res.status(401).json({ message: 'Invalid username/email or password' });
+    if (!user || !(await user.matchPassword(password))) {
+      return res.status(401).json({ message: 'Invalid username/email or password' });
     }
+
+    // ── Working-hours lock: non-exempt roles cannot log in outside 06:00–18:00 IST ──
+    if (!EXEMPT_ROLES.includes(user.role)) {
+      const { date: today, hours, minutes } = getIST();
+      const totalMinutes = hours * 60 + minutes;
+      const START_MIN = 6 * 60;   // 06:00 IST = 360 min
+      const END_MIN   = 18 * 60;  // 18:00 IST = 1080 min
+
+      if (totalMinutes >= END_MIN || totalMinutes < START_MIN) {
+        return res.status(403).json({
+          message:
+            'Work hours ended at 6:00 PM. Daily auto-logout is completed for today. ' +
+            'Employee login is locked until tomorrow morning (6:00 AM IST).',
+          code: 'AFTER_HOURS_LOCK',
+        });
+      }
+
+      // Also block re-login if today's attendance already has an auto-checkout at 18:00
+      const todayRecord = await Attendance.findOne({ where: { employeeName: user.name, date: today } });
+      if (todayRecord && todayRecord.checkOut === '18:00') {
+        return res.status(403).json({
+          message:
+            'Your attendance was auto-checked-out at 6:00 PM today. ' +
+            'Employee login is locked until tomorrow morning (6:00 AM IST).',
+          code: 'AFTER_HOURS_LOCK',
+        });
+      }
+    }
+
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+      department: user.department,
+      token: generateToken(user.id),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
